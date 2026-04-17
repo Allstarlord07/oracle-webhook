@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Options Oracle — Live Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #060d18; color: #c8dff0; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #1e3050; border-radius: 3px; }
+  .mono { font-family: 'Space Mono', monospace; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+
+  header {
+    background: #07101e;
+    border-bottom: 1px solid #172334;
+    padding: 16px 24px;
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#00e87a,#38d9c0); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 0 18px #00e87a44; }
+  .status-dot { width:8px; height:8px; border-radius:50%; background:#00e87a; box-shadow:0 0 8px #00e87a; animation:pulse 2s infinite; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px 20px; }
+
+  .empty { text-align:center; padding:100px 20px; }
+  .empty-icon { font-size:60px; opacity:0.08; margin-bottom:20px; }
+
+  .alert-card {
+    background: #0c1622;
+    border: 1px solid #172334;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    overflow: hidden;
+    animation: slideIn 0.4s ease;
+  }
+  .alert-header {
+    padding: 14px 18px;
+    background: #0a1420;
+    border-bottom: 1px solid #172334;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .ticker { font-family:'Space Mono',monospace; font-weight:700; font-size:20px; color:#e8f4ff; letter-spacing:2px; }
+  .tag { background:#172334; border-radius:4px; padding:2px 8px; font-family:'Space Mono',monospace; font-size:9px; color:#5a7a94; letter-spacing:1px; }
+  .time-tag { margin-left:auto; font-family:'Space Mono',monospace; font-size:9px; color:#5a7a94; }
+
+  .analyzing { padding:20px 18px; display:flex; align-items:center; gap:12px; }
+  .spinner { width:14px; height:14px; border:2px solid #1a3a2a; border-top-color:#00e87a; border-radius:50%; animation:spin 0.7s linear infinite; flex-shrink:0; }
+
+  .analysis-body { padding: 16px 18px; }
+
+  .hero-row { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+  .price-block .label { font-family:'Space Mono',monospace; font-size:9px; color:#5a7a94; letter-spacing:2px; margin-bottom:3px; }
+  .price-block .value { font-family:'Space Mono',monospace; font-size:15px; font-weight:700; }
+
+  .bias-block { text-align:center; }
+  .bias-block .label { font-family:'Space Mono',monospace; font-size:9px; color:#5a7a94; letter-spacing:2px; margin-bottom:4px; }
+  .bias-block .value { font-family:'Space Mono',monospace; font-weight:700; font-size:14px; }
+
+  .grade-badge { font-family:'Space Mono',monospace; font-weight:700; font-size:20px; border-radius:6px; padding:2px 14px; border:2px solid; }
+
+  .meter-bar { height:4px; background:#0a1420; border-radius:2px; margin-bottom:12px; }
+  .meter-fill { height:100%; border-radius:2px; transition:width 1s ease; }
+
+  .reason-box { padding:10px 13px; background:#0a1420; border-radius:8px; font-size:13px; color:#a8c8e0; line-height:1.65; border-left:3px solid; margin-bottom:14px; }
+
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .section { background:#0a1420; border-radius:8px; overflow:hidden; }
+  .section-head { padding:8px 12px; border-bottom:1px solid #172334; font-family:'Space Mono',monospace; font-size:9px; color:#38d9c0; letter-spacing:2px; font-weight:700; }
+  .section-body { padding:10px 12px; }
+  .row { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #172334; }
+  .row-label { font-family:'Space Mono',monospace; font-size:9px; color:#5a7a94; letter-spacing:1px; }
+  .row-value { font-family:'Space Mono',monospace; font-size:10px; font-weight:700; }
+
+  .signals-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:10px 12px; }
+  .signal-chip { background:#060d18; border-radius:6px; padding:8px 10px; }
+  .signal-name { font-family:'Space Mono',monospace; font-size:9px; color:#c8dff0; font-weight:700; margin-bottom:3px; }
+  .signal-detail { font-size:10px; color:#5a7a94; line-height:1.4; }
+  .signal-pill { font-family:'Space Mono',monospace; font-size:8px; font-weight:700; border-radius:3px; padding:1px 6px; float:right; }
+
+  .verdict-box { border-radius:10px; padding:16px; margin-bottom:12px; border:2px solid; }
+  .verdict-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .verdict-icon { font-size:26px; }
+  .verdict-label { font-family:'Space Mono',monospace; font-size:8px; letter-spacing:3px; margin-bottom:3px; }
+  .verdict-text { font-family:'Space Mono',monospace; font-weight:700; font-size:16px; letter-spacing:2px; }
+  .verdict-reason { font-size:12px; line-height:1.7; padding:10px 12px; background:#060d18; border-radius:6px; border-left:3px solid; color:#c8dff0; }
+
+  .warnings { padding:8px 12px; }
+  .warning-row { display:flex; gap:8px; padding:5px 0; border-bottom:1px solid #172334; font-size:12px; color:#a8c8e0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡</div>
+  <div>
+    <div class="mono" style="font-weight:700;font-size:15px;letter-spacing:3px;color:#e8f4ff;">OPTIONS ORACLE</div>
+    <div class="mono" style="font-size:9px;color:#38d9c0;letter-spacing:3px;">LIVE TRADINGVIEW DASHBOARD</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+    <div class="status-dot"></div>
+    <span class="mono" style="font-size:9px;color:#5a7a94;" id="statusText">WAITING FOR ALERTS</span>
+  </div>
+  <div class="mono" style="font-size:9px;color:#5a7a94;" id="clock"></div>
+</header>
+
+<div class="container">
+  <div id="alerts-container">
+    <div class="empty">
+      <div class="empty-icon">📡</div>
+      <div class="mono" style="font-size:13px;color:#1e3040;letter-spacing:3px;margin-bottom:10px;">WAITING FOR TRADINGVIEW ALERTS</div>
+      <div style="font-size:12px;color:#162028;margin-bottom:6px;">Set your webhook URL in TradingView alerts</div>
+      <div style="font-size:12px;color:#162028;">Every alert will be analyzed by Claude automatically</div>
+      <div id="webhookUrl" class="mono" style="margin-top:24px;padding:12px 16px;background:#0c1622;border:1px solid #172334;border-radius:8px;font-size:11px;color:#38d9c0;word-break:break-all;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Show webhook URL
+  document.getElementById("webhookUrl").textContent = "Your webhook URL: " + window.location.origin + "/webhook";
+
+  // Clock
+  function updateClock() {
+    document.getElementById("clock").textContent = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function getColor(type) {
+    const map = { bullish: "#00e87a", bearish: "#ff4060", neutral: "#ffd93d", A: "#00e87a", B: "#38d9c0", C: "#ffd93d", D: "#ff4060" };
+    return map[type?.toLowerCase()] || "#5a7a94";
+  }
+
+  function renderAnalysis(a) {
+    if (!a) return "";
+    const bc = getColor(a.directionalBias);
+    const gc = getColor(a.tradeGrade);
+    const vc = a.tradeVerdict === "TAKE THE TRADE" ? "#00e87a" : a.tradeVerdict === "SKIP THIS TRADE" ? "#ff4060" : "#ffd93d";
+    const vIcon = a.tradeVerdict === "TAKE THE TRADE" ? "✅" : a.tradeVerdict === "SKIP THIS TRADE" ? "🚫" : "⏳";
+    const conf = Math.min(100, Math.max(0, Number(a.confidence) || 0));
+    const confCol = conf >= 70 ? "#00e87a" : conf >= 45 ? "#ffd93d" : "#ff4060";
+
+    const signals = (a.signals || []).map(s => {
+      const sc = getColor(s.signal);
+      return `<div class="signal-chip">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <span class="signal-name">${s.indicator || ""}</span>
+          <span class="signal-pill" style="background:${sc}22;color:${sc};border:1px solid ${sc}44;">${(s.signal||"").toUpperCase()}</span>
+        </div>
+        <div class="signal-detail">${s.detail || ""}</div>
+      </div>`;
+    }).join("");
+
+    const warnings = (a.riskWarnings || []).map(w => `<div class="warning-row"><span style="color:#ff4060;font-weight:700;flex-shrink:0;">!</span><span>${w}</span></div>`).join("");
+
+    return `
+      <div class="hero-row">
+        <div>
+          <div class="price-block" style="margin-bottom:8px;">
+            <div class="label">ALERT PRICE</div>
+            <div class="value" style="color:#5a7a94;">${a.alertPrice || "N/A"}</div>
+          </div>
+          <div class="price-block">
+            <div class="label">LIVE PRICE</div>
+            <div class="value" style="color:#00e87a;">${a.currentPrice || "N/A"}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:20px;align-items:center;">
+          <div class="bias-block">
+            <div class="label">BIAS</div>
+            <div class="value" style="color:${bc};">${a.directionalBias === "Bullish" ? "▲" : a.directionalBias === "Bearish" ? "▼" : "◆"} ${(a.directionalBias||"").toUpperCase()}</div>
+          </div>
+          <div class="bias-block">
+            <div class="label">GRADE</div>
+            <div class="grade-badge" style="color:${gc};border-color:${gc};background:${gc}18;">${a.tradeGrade || "?"}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:4px;display:flex;justify-content:space-between;">
+        <span class="mono" style="font-size:9px;color:#5a7a94;">CONFIDENCE</span>
+        <span class="mono" style="font-size:10px;color:${confCol};font-weight:700;">${conf}%</span>
+      </div>
+      <div class="meter-bar" style="margin-bottom:12px;">
+        <div class="meter-fill" style="width:${conf}%;background:${confCol};box-shadow:0 0 8px ${confCol};"></div>
+      </div>
+
+      ${a.biasReason ? `<div class="reason-box" style="border-color:${bc};">${a.biasReason}</div>` : ""}
+
+      <div class="grid-2">
+        <div class="section">
+          <div class="section-head">📊 KEY LEVELS</div>
+          <div class="section-body">
+            <div class="row"><span class="row-label">STRONG RESIST</span><span class="row-value" style="color:#ff4060;">${a.strongResistance||"—"}</span></div>
+            <div class="row"><span class="row-label">RESISTANCE</span><span class="row-value" style="color:#ff8060;">${a.resistance||"—"}</span></div>
+            <div class="row"><span class="row-label">SUPPORT</span><span class="row-value" style="color:#6bc8ff;">${a.support||"—"}</span></div>
+            <div class="row"><span class="row-label">STRONG SUPPORT</span><span class="row-value" style="color:#00e87a;">${a.strongSupport||"—"}</span></div>
+            <div class="row"><span class="row-label">TARGET</span><span class="row-value" style="color:#38d9c0;">${a.priceTarget||"—"}</span></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head">🎯 STRATEGY</div>
+          <div class="section-body">
+            <div style="text-align:center;padding:6px;margin-bottom:8px;background:#060d18;border-radius:5px;font-family:'Space Mono',monospace;font-size:11px;color:#38d9c0;font-weight:700;">${a.strategyType||"—"}</div>
+            <div class="row"><span class="row-label">STRIKES</span><span class="row-value">${a.strikes||"—"}</span></div>
+            <div class="row"><span class="row-label">EXPIRY</span><span class="row-value" style="color:#ffd93d;">${a.expiration||"—"}</span></div>
+            <div class="row"><span class="row-label">COST</span><span class="row-value">${a.estimatedCost||"—"}</span></div>
+            <div class="row"><span class="row-label">MAX PROFIT</span><span class="row-value" style="color:#00e87a;">${a.maxProfit||"—"}</span></div>
+            <div class="row"><span class="row-label">MAX LOSS</span><span class="row-value" style="color:#ff4060;">${a.maxLoss||"—"}</span></div>
+            <div class="row"><span class="row-label">BREAKEVEN</span><span class="row-value">${a.breakeven||"—"}</span></div>
+            <div class="row"><span class="row-label">PROB. PROFIT</span><span class="row-value" style="color:#38d9c0;">${a.probabilityOfProfit||"—"}</span></div>
+          </div>
+        </div>
+      </div>
+
+      ${signals ? `<div class="section" style="margin-bottom:12px;"><div class="section-head">📈 SIGNALS</div><div class="signals-grid">${signals}</div></div>` : ""}
+
+      <div class="grid-2">
+        <div class="section">
+          <div class="section-head">🟢 ENTRY</div>
+          <div class="section-body" style="font-size:12px;color:#a8c8e0;line-height:1.55;">${a.entryCondition||"—"}</div>
+        </div>
+        <div class="section">
+          <div class="section-head">🚪 EXIT</div>
+          <div class="section-body">
+            <div class="row"><span class="row-label">PROFIT TARGET</span><span class="row-value" style="color:#00e87a;">${a.profitTarget||"—"}</span></div>
+            <div class="row"><span class="row-label">STOP LOSS</span><span class="row-value" style="color:#ff4060;">${a.stopLoss||"—"}</span></div>
+          </div>
+        </div>
+      </div>
+
+      ${warnings ? `<div class="section" style="margin-bottom:12px;margin-top:12px;"><div class="section-head">⚠️ RISKS</div><div class="warnings">${warnings}</div></div>` : ""}
+
+      <div class="verdict-box" style="background:${vc}0d;border-color:${vc};box-shadow:0 0 24px ${vc}18;margin-top:12px;">
+        <div class="verdict-top">
+          <span class="verdict-icon">${vIcon}</span>
+          <div>
+            <div class="verdict-label" style="color:${vc};">ORACLE VERDICT</div>
+            <div class="verdict-text" style="color:${vc};">${a.tradeVerdict||"—"}</div>
+          </div>
+        </div>
+        <div class="verdict-reason" style="border-color:${vc};">${a.verdictReason||""}</div>
+      </div>
+    `;
+  }
+
+  let lastCount = 0;
+
+  async function poll() {
+    try {
+      const resp = await fetch("/alerts");
+      const alerts = await resp.json();
+
+      if (alerts.length !== lastCount) {
+        lastCount = alerts.length;
+        document.getElementById("statusText").textContent = alerts.length + " ALERT" + (alerts.length !== 1 ? "S" : "") + " RECEIVED";
+      }
+
+      const container = document.getElementById("alerts-container");
+
+      if (alerts.length === 0) {
+        container.innerHTML = `<div class="empty">
+          <div class="empty-icon">📡</div>
+          <div class="mono" style="font-size:13px;color:#1e3040;letter-spacing:3px;margin-bottom:10px;">WAITING FOR TRADINGVIEW ALERTS</div>
+          <div style="font-size:12px;color:#162028;margin-bottom:6px;">Set your webhook URL in TradingView alerts</div>
+          <div id="webhookUrl" class="mono" style="margin-top:24px;padding:12px 16px;background:#0c1622;border:1px solid #172334;border-radius:8px;font-size:11px;color:#38d9c0;word-break:break-all;">Your webhook URL: ${window.location.origin}/webhook</div>
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = alerts.map(alert => `
+        <div class="alert-card" id="alert-${alert.id}">
+          <div class="alert-header">
+            <span class="ticker">${alert.ticker}</span>
+            <span class="tag">${alert.indicator}</span>
+            <span class="tag">${alert.timeframe}</span>
+            <span class="tag">@ $${alert.price}</span>
+            ${alert.message ? `<span class="tag">${alert.message.slice(0,30)}</span>` : ""}
+            <span class="time-tag">${alert.date} ${alert.time}</span>
+          </div>
+          ${alert.status === "analyzing"
+            ? `<div class="analyzing"><div class="spinner"></div><span class="mono" style="font-size:11px;color:#38d9c0;animation:pulse 2s infinite;">Searching live data & analyzing with Claude...</span></div>`
+            : alert.status === "error"
+            ? `<div style="padding:14px 18px;font-size:12px;color:#ff4060;">Error: ${alert.error}</div>`
+            : `<div class="analysis-body">${renderAnalysis(alert.analysis)}</div>`
+          }
+        </div>
+      `).join("");
+
+    } catch (e) {
+      console.warn("Poll error:", e.message);
+    }
+  }
+
+  // Poll every 3 seconds for live updates
+  setInterval(poll, 3000);
+  poll();
+</script>
+</body>
+</html>
